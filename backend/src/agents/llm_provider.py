@@ -15,24 +15,41 @@ class LLMProvider:
         ollama_base_url: str = "http://localhost:11434",
         default_model: str = "gpt-5.6-terra",
     ):
-        self.openai = AsyncOpenAI(api_key=openai_api_key) if openai_api_key else None
-        self.anthropic = AsyncAnthropic(api_key=anthropic_api_key) if anthropic_api_key else None
+        self._openai_key = openai_api_key
+        self._anthropic_key = anthropic_api_key
+        self._deepseek_key = deepseek_api_key
+        self._openrouter_key = openrouter_api_key
+        self.ollama_base_url = ollama_base_url
+        self.default_model = default_model
+        self._user_keys: dict[str, str] = {}
+        self._rebuild_clients()
+
+    def _rebuild_clients(self):
+        openai_key = self._user_keys.get("openai") or self._openai_key
+        anthropic_key = self._user_keys.get("anthropic") or self._anthropic_key
+        deepseek_key = self._user_keys.get("deepseek") or self._deepseek_key
+        openrouter_key = self._user_keys.get("openrouter") or self._openrouter_key
+
+        self.openai = AsyncOpenAI(api_key=openai_key) if openai_key else None
+        self.anthropic = AsyncAnthropic(api_key=anthropic_key) if anthropic_key else None
         self.deepseek = (
-            AsyncOpenAI(api_key=deepseek_api_key, base_url="https://api.deepseek.com/v1")
-            if deepseek_api_key
+            AsyncOpenAI(api_key=deepseek_key, base_url="https://api.deepseek.com/v1")
+            if deepseek_key
             else None
         )
         self.openrouter = (
             AsyncOpenAI(
-                api_key=openrouter_api_key,
+                api_key=openrouter_key,
                 base_url="https://openrouter.ai/api/v1",
                 default_headers={"HTTP-Referer": "http://localhost:3000", "X-Title": "Hendrickson"},
             )
-            if openrouter_api_key
+            if openrouter_key
             else None
         )
-        self.ollama_base_url = ollama_base_url
-        self.default_model = default_model
+
+    def set_user_keys(self, keys: dict[str, str]):
+        self._user_keys = keys
+        self._rebuild_clients()
 
     async def generate(
         self,

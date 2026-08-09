@@ -5,6 +5,7 @@ from typing import Optional
 from src.engines.prd_parser import PRDParser
 from src.engines.github_indexer import GitHubIndexer
 from src.engines.jira_connector import JIRAConnector
+from src.engines.linear_connector import LinearConnector
 from src.models.context import Context, PRDReference, CodebaseReference, TicketingReference
 
 
@@ -15,6 +16,7 @@ class Triangulator:
         jira_url: str = "",
         jira_email: str = "",
         jira_api_token: str = "",
+        linear_api_key: str = "",
     ):
         self.prd_parser = PRDParser()
         self.github_indexer = GitHubIndexer(token=github_token)
@@ -23,6 +25,7 @@ class Triangulator:
             if jira_url and jira_email and jira_api_token
             else None
         )
+        self.linear = LinearConnector(linear_api_key) if linear_api_key else None
 
     async def triangulate(
         self,
@@ -31,6 +34,7 @@ class Triangulator:
         repo_url: Optional[str] = None,
         branch: str = "main",
         jira_keys: Optional[list[str]] = None,
+        linear_issue_ids: Optional[list[str]] = None,
     ) -> dict:
         context_id = f"CTX-{uuid.uuid4().hex[:8].upper()}"
         result = {"context_id": context_id, "requirements": [], "code_entities": [], "tickets": []}
@@ -60,6 +64,12 @@ class Triangulator:
                     tickets.append(issue)
             result["tickets"] = tickets
 
+        if linear_issue_ids and self.linear:
+            for issue_id in linear_issue_ids:
+                issue = await self.linear.get_issue(issue_id)
+                if issue:
+                    result["tickets"].append(issue)
+
         return result
 
     def build_context_document(self, triangulation_result: dict) -> Context:
@@ -83,8 +93,11 @@ class Triangulator:
             )
 
         if triangulation_result.get("tickets"):
+            jira_keys = [t["external_id"] for t in triangulation_result["tickets"] if t.get("source") == "jira"]
+            linear_ids = [t["external_id"] for t in triangulation_result["tickets"] if t.get("source") == "linear"]
             ctx.ticketing = TicketingReference(
-                jira_issue_keys=[t["external_id"] for t in triangulation_result["tickets"]],
+                jira_issue_keys=jira_keys,
+                linear_issue_ids=linear_ids,
                 status="In QA Verification",
             )
 

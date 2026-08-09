@@ -14,6 +14,7 @@ class TriangulateRequest(BaseModel):
     repo_url: str | None = None
     branch: str = "main"
     jira_keys: list[str] | None = None
+    linear_issue_ids: list[str] | None = None
 
 
 class ContextResponse(BaseModel):
@@ -24,13 +25,39 @@ class ContextResponse(BaseModel):
     codebase: dict | None = None
 
 
+async def _get_user_settings(db):
+    doc = await db.settings.find_one({"settings_id": "default"})
+    if not doc:
+        return None
+    doc.pop("_id", None)
+    return doc
+
+
 @router.post("/triangulate", response_model=ContextResponse)
 async def triangulate(req: TriangulateRequest, request: Request):
+    db = request.app.state.mongo_db
+    user_settings = await _get_user_settings(db)
+
+    github_token = settings.github_token
+    jira_url = settings.jira_url
+    jira_email = settings.jira_email
+    jira_api_token = settings.jira_api_token
+    linear_api_key = settings.linear_api_key
+
+    if user_settings:
+        conn = user_settings.get("connectors", {})
+        github_token = conn.get("github", {}).get("token") or github_token
+        jira_url = conn.get("jira", {}).get("url") or jira_url
+        jira_email = conn.get("jira", {}).get("email") or jira_email
+        jira_api_token = conn.get("jira", {}).get("api_token") or jira_api_token
+        linear_api_key = conn.get("linear", {}).get("api_key") or linear_api_key
+
     triangulator = Triangulator(
-        github_token=settings.github_token,
-        jira_url=settings.jira_url,
-        jira_email=settings.jira_email,
-        jira_api_token=settings.jira_api_token,
+        github_token=github_token,
+        jira_url=jira_url,
+        jira_email=jira_email,
+        jira_api_token=jira_api_token,
+        linear_api_key=linear_api_key,
     )
 
     result = await triangulator.triangulate(
@@ -39,11 +66,11 @@ async def triangulate(req: TriangulateRequest, request: Request):
         repo_url=req.repo_url,
         branch=req.branch,
         jira_keys=req.jira_keys,
+        linear_issue_ids=req.linear_issue_ids,
     )
 
     context_doc = triangulator.build_context_document(result)
 
-    db = request.app.state.mongo_db
     vector_store = request.app.state.vector_store
 
     await db.contexts.insert_one(context_doc.model_dump())

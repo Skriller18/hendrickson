@@ -30,6 +30,7 @@ export const api = {
       repo_url?: string;
       branch?: string;
       jira_keys?: string[];
+      linear_issue_ids?: string[];
     }) =>
       request<{
         context_id: string;
@@ -100,6 +101,7 @@ export const api = {
         `/api/runs${contextId ? `?context_id=${contextId}` : ""}`
       ),
   },
+
   models: {
     list: () =>
       request<{
@@ -108,5 +110,84 @@ export const api = {
       }>("/api/models"),
     providers: () =>
       request<Record<string, { name: string; model_count: number }>>("/api/models/providers"),
+  },
+
+  settings: {
+    get: () =>
+      request<{
+        settings_id: string;
+        provider_keys: Array<{ provider: string; api_key: string; label: string }>;
+        connectors: Record<string, unknown>;
+        default_model: string;
+      }>("/api/settings"),
+
+    addProviderKey: (provider: string, apiKey: string) =>
+      request<{ status: string; provider: string }>("/api/settings/provider-keys", {
+        method: "POST",
+        body: JSON.stringify({ provider, api_key: apiKey }),
+      }),
+
+    removeProviderKey: (provider: string) =>
+      request<{ status: string }>(`/api/settings/provider-keys/${provider}`, {
+        method: "DELETE",
+      }),
+
+    configureJira: (url: string, email: string, apiToken: string) =>
+      request<{ status: string }>("/api/settings/jira", {
+        method: "POST",
+        body: JSON.stringify({ url, email, api_token: apiToken }),
+      }),
+
+    configureLinear: (apiKey: string) =>
+      request<{ status: string }>("/api/settings/linear", {
+        method: "POST",
+        body: JSON.stringify({ api_key: apiKey }),
+      }),
+
+    configureGitHub: (token: string) =>
+      request<{ status: string; username: string; connected: boolean }>("/api/settings/github", {
+        method: "POST",
+        body: JSON.stringify({ token }),
+      }),
+
+    disconnectGitHub: () =>
+      request<{ status: string }>("/api/settings/github", {
+        method: "DELETE",
+      }),
+  },
+
+  connectors: {
+    listGitHubRepos: () =>
+      request<Array<Record<string, unknown>>>("/api/connectors/github/repos"),
+
+    listRepoBranches: (owner: string, repo: string) =>
+      request<Array<{ name: string; sha: string }>>(`/api/connectors/github/repos/${owner}/${repo}/branches`),
+
+    getJiraIssue: (issueKey: string) =>
+      request<Record<string, unknown>>("/api/connectors/jira/issue", {
+        method: "POST",
+        body: JSON.stringify({ issue_key: issueKey }),
+      }),
+
+    searchJira: (jql: string, maxResults: number = 50) =>
+      request<Array<Record<string, unknown>>>("/api/connectors/jira/search", {
+        method: "POST",
+        body: JSON.stringify({ jql, max_results: maxResults }),
+      }),
+
+    getLinearIssue: (issueId: string) =>
+      request<Record<string, unknown>>("/api/connectors/linear/issue", {
+        method: "POST",
+        body: JSON.stringify({ issue_id: issueId }),
+      }),
+
+    listLinearTeams: () =>
+      request<Array<Record<string, unknown>>>("/api/connectors/linear/teams"),
+
+    searchLinear: (teamId: string, maxResults: number = 50) =>
+      request<Array<Record<string, unknown>>>("/api/connectors/linear/search", {
+        method: "POST",
+        body: JSON.stringify({ team_id: teamId, max_results: maxResults }),
+      }),
   },
 };

@@ -1,21 +1,23 @@
 "use client";
 
 import { useState } from "react";
-import { MessageSquare, FileText, Code2, Terminal, Activity } from "lucide-react";
+import { MessageSquare, FileText, Code2, Terminal, Activity, Settings } from "lucide-react";
 import { ChatPanel } from "@/components/chat/ChatPanel";
 import { DrawerPanel } from "@/components/drawer/DrawerPanel";
 import { CanvasPanel } from "@/components/canvas/CanvasPanel";
 import { RunnerPanel } from "@/components/runner/RunnerPanel";
 import { TelemetryPanel } from "@/components/telemetry/TelemetryPanel";
+import { SettingsPanel } from "@/components/settings/SettingsPanel";
 import { cn } from "@/lib/utils";
 
-type Tab = "chat" | "canvas" | "runner" | "telemetry";
+type Tab = "chat" | "canvas" | "runner" | "telemetry" | "settings";
 
 const tabs: { id: Tab; label: string; icon: React.ReactNode }[] = [
   { id: "chat", label: "AI Assistant", icon: <MessageSquare className="w-4 h-4" /> },
   { id: "canvas", label: "Test Canvas", icon: <Code2 className="w-4 h-4" /> },
   { id: "runner", label: "Runner", icon: <Terminal className="w-4 h-4" /> },
   { id: "telemetry", label: "Telemetry", icon: <Activity className="w-4 h-4" /> },
+  { id: "settings", label: "Settings", icon: <Settings className="w-4 h-4" /> },
 ];
 
 export default function DashboardPage() {
@@ -60,6 +62,7 @@ export default function DashboardPage() {
           {activeTab === "canvas" && <CanvasPanel />}
           {activeTab === "runner" && <RunnerPanel />}
           {activeTab === "telemetry" && <TelemetryPanel />}
+          {activeTab === "settings" && <SettingsPanel />}
         </div>
       </div>
     </div>

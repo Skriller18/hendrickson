@@ -52,6 +52,46 @@ interface ModelInfo {
   cost_level: string;
 }
 
+interface ProviderKey {
+  provider: string;
+  api_key: string;
+  label: string;
+}
+
+interface JiraConfig {
+  url: string;
+  email: string;
+  api_token: string;
+}
+
+interface LinearConfig {
+  api_key: string;
+}
+
+interface GitHubConfig {
+  token: string;
+  connected: boolean;
+  username: string;
+}
+
+interface Repo {
+  id: number;
+  name: string;
+  full_name: string;
+  private: boolean;
+  html_url: string;
+  clone_url: string;
+  default_branch: string;
+  description: string;
+  language: string;
+  updated_at: string;
+}
+
+interface Branch {
+  name: string;
+  sha: string;
+}
+
 interface AppState {
   activeContextId: string | null;
   setActiveContextId: (id: string | null) => void;
@@ -89,6 +129,30 @@ interface AppState {
   setAvailableModels: (models: ModelInfo[]) => void;
   modelProviders: Record<string, { name: string; models: ModelInfo[] }>;
   setModelProviders: (providers: Record<string, { name: string; models: ModelInfo[] }>) => void;
+
+  providerKeys: ProviderKey[];
+  setProviderKeys: (keys: ProviderKey[]) => void;
+
+  jiraConfig: JiraConfig | null;
+  setJiraConfig: (config: JiraConfig | null) => void;
+
+  linearConfig: LinearConfig | null;
+  setLinearConfig: (config: LinearConfig | null) => void;
+
+  githubConfig: GitHubConfig | null;
+  setGitHubConfig: (config: GitHubConfig | null) => void;
+
+  selectedRepo: Repo | null;
+  setSelectedRepo: (repo: Repo | null) => void;
+
+  selectedBranch: Branch | null;
+  setSelectedBranch: (branch: Branch | null) => void;
+
+  selectedJiraKeys: string[] | null;
+  setSelectedJiraKeys: (keys: string[] | null) => void;
+
+  selectedLinearIds: string[] | null;
+  setSelectedLinearIds: (ids: string[] | null) => void;
 }
 
 export const useStore = create<AppState>((set) => ({
@@ -130,4 +194,28 @@ export const useStore = create<AppState>((set) => ({
   setAvailableModels: (models) => set({ availableModels: models }),
   modelProviders: {},
   setModelProviders: (providers) => set({ modelProviders: providers }),
+
+  providerKeys: [],
+  setProviderKeys: (keys) => set({ providerKeys: keys }),
+
+  jiraConfig: null,
+  setJiraConfig: (config) => set({ jiraConfig: config }),
+
+  linearConfig: null,
+  setLinearConfig: (config) => set({ linearConfig: config }),
+
+  githubConfig: null,
+  setGitHubConfig: (config) => set({ githubConfig: config }),
+
+  selectedRepo: null,
+  setSelectedRepo: (repo) => set({ selectedRepo: repo }),
+
+  selectedBranch: null,
+  setSelectedBranch: (branch) => set({ selectedBranch: branch }),
+
+  selectedJiraKeys: null,
+  setSelectedJiraKeys: (keys) => set({ selectedJiraKeys: keys }),
+
+  selectedLinearIds: null,
+  setSelectedLinearIds: (ids) => set({ selectedLinearIds: ids }),
 }));

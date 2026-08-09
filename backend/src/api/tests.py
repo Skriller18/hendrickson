@@ -33,6 +33,14 @@ class TestCaseResponse(BaseModel):
 async def generate_tests(req: GenerateTestsRequest, request: Request):
     db = request.app.state.mongo_db
     orchestrator = request.app.state.orchestrator
+    llm = request.app.state.llm
+
+    user_settings_doc = await db.settings.find_one({"settings_id": "default"})
+    if user_settings_doc:
+        user_keys = {}
+        for pk in user_settings_doc.get("provider_keys", []):
+            user_keys[pk["provider"]] = pk["api_key"]
+        llm.set_user_keys(user_keys)
 
     context_doc = await db.contexts.find_one({"context_id": req.context_id})
     if not context_doc:

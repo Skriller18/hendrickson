@@ -34,6 +34,14 @@ If provided with relevant requirements and code context below, use it to give sp
 async def send_message(req: ChatRequest, request: Request):
     llm = request.app.state.llm
     vector_store = request.app.state.vector_store
+    db = request.app.state.mongo_db
+
+    user_settings_doc = await db.settings.find_one({"settings_id": "default"})
+    if user_settings_doc:
+        user_keys = {}
+        for pk in user_settings_doc.get("provider_keys", []):
+            user_keys[pk["provider"]] = pk["api_key"]
+        llm.set_user_keys(user_keys)
 
     rag_context = ""
     if req.context_id:

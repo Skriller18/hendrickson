@@ -7,7 +7,7 @@ from src.config import settings
 from src.agents.llm_provider import LLMProvider
 from src.agents.orchestrator import TestOrchestrator
 from src.services.vector_store import VectorStore
-from src.api import chat, contexts, tests, runs, ws, models
+from src.api import chat, contexts, tests, runs, ws, models, settings as settings_api, connectors, prd
 
 app = FastAPI(title="Hendrickson", version="0.1.0")
 
@@ -25,6 +25,9 @@ app.include_router(tests.router, prefix="/api/tests", tags=["tests"])
 app.include_router(runs.router, prefix="/api/runs", tags=["runs"])
 app.include_router(ws.router, prefix="/ws", tags=["websocket"])
 app.include_router(models.router, prefix="/api/models", tags=["models"])
+app.include_router(settings_api.router, prefix="/api/settings", tags=["settings"])
+app.include_router(connectors.router, prefix="/api/connectors", tags=["connectors"])
+app.include_router(prd.router, prefix="/api/prd", tags=["prd"])
 
 
 @app.on_event("startup")

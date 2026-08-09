@@ -1,6 +1,6 @@
 # Hendrickson
 
-AI-driven multi-agent QA testing harness that synthesizes PRDs, source code, and ticketing systems into a unified triangulated context graph — then generates, executes, and analyzes full-spectrum test suites.
+AI-driven multi-agent QA testing harness that synthesizes PRDs, source code, and ticketing systems (JIRA, Linear, GitHub) into a unified triangulated context graph — then generates, executes, and analyzes full-spectrum test suites.
 
 ---
 
@@ -17,6 +17,7 @@ AI-driven multi-agent QA testing harness that synthesizes PRDs, source code, and
 │  • Test Canvas + Monaco │  • Docker Sandbox   │  • Docker SDK    │
 │  • Execution Runner     │  • RAG Vector Store │                  │
 │  • Telemetry Dashboard  │  • WebSocket Logs   │                  │
+│  • Settings Panel       │  • Connectors API   │                  │
 └──────────────────────────────────────────────────────────────────┘
 ```
 
@@ -31,6 +32,138 @@ AI-driven multi-agent QA testing harness that synthesizes PRDs, source code, and
 | Docker | 24+ | Sandbox execution + docker-compose |
 | MongoDB | 7 | Data persistence |
 | Qdrant | latest | Vector embeddings / RAG |
+
+---
+
+## Service Setup
+
+Before starting the backend, you must have MongoDB, Qdrant, and Docker installed and running. Choose one of the methods below for each service.
+
+### 1. Docker
+
+Docker is required for sandboxed test execution and for running MongoDB/Qdrant via docker-compose.
+
+**macOS**
+```bash
+# Download and install Docker Desktop
+# https://www.docker.com/products/docker-desktop/
+
+# Or via Homebrew
+brew install --cask docker
+# Launch Docker Desktop from Applications, then verify:
+docker --version
+docker ps
+```
+
+**Linux (Ubuntu/Debian)**
+```bash
+sudo apt update
+sudo apt install -y ca-certificates curl
+sudo install -m 0755 -d /etc/apt/keyrings
+sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+sudo chmod a+r /etc/apt/keyrings/docker.asc
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+sudo apt update
+sudo apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+sudo usermod -aG docker $USER
+# Log out and back in, then verify:
+docker --version
+docker ps
+```
+
+**Windows**
+```powershell
+# Download and install Docker Desktop from:
+# https://www.docker.com/products/docker-desktop/
+# After installation, verify in PowerShell:
+docker --version
+docker ps
+```
+
+### 2. MongoDB 7
+
+**Option A: Docker (recommended)**
+```bash
+docker run -d --name mongodb \
+  -p 27017:27017 \
+  -v mongo_data:/data/db \
+  -e MONGO_INITDB_DATABASE=hendrickson \
+  mongo:7
+
+# Verify
+docker ps | grep mongodb
+```
+
+**Option B: Homebrew (macOS)**
+```bash
+brew tap mongodb/brew
+brew install mongodb-community@7.0
+brew services start mongodb-community@7.0
+
+# Verify
+mongosh --eval "db.version()"
+```
+
+**Option C: Direct install (Linux)**
+```bash
+# Ubuntu/Debian
+curl -fsSL https://www.mongodb.org/static/pgp/server-7.0.asc | sudo gpg --dearmor -o /usr/share/keyrings/mongodb-server-7.0.gpg
+echo "deb [signed-by=/usr/share/keyrings/mongodb-server-7.0.gpg] https://repo.mongodb.org/apt/ubuntu jammy/mongodb-org/7.0 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-org-7.0.list
+sudo apt update
+sudo apt install -y mongodb-org
+sudo systemctl start mongod
+sudo systemctl enable mongod
+
+# Verify
+mongosh --eval "db.version()"
+```
+
+### 3. Qdrant
+
+**Option A: Docker (recommended)**
+```bash
+docker run -d --name qdrant \
+  -p 6333:6333 \
+  -p 6334:6334 \
+  -v qdrant_data:/qdrant/storage \
+  qdrant/qdrant:latest
+
+# Verify
+curl http://localhost:6333/health
+```
+
+**Option B: Quick install (macOS/Linux)**
+```bash
+# Download and run the latest binary
+curl -fsSL https://qdrant.tech/install.sh | bash
+
+# Or via Homebrew (macOS)
+brew install qdrant
+qdrant
+
+# Verify
+curl http://localhost:6333/health
+```
+
+### 4. Start All Services Together
+
+Once Docker is installed, the simplest way to start MongoDB and Qdrant together:
+
+```bash
+docker-compose up -d mongodb qdrant
+```
+
+Verify all services are healthy:
+```bash
+# MongoDB
+docker exec mongodb mongosh --eval "db.version()"
+
+# Qdrant
+curl -s http://localhost:6333/health
+
+# Docker
+docker ps
+```
 
 ---
 
@@ -111,7 +244,7 @@ uvicorn src.main:app --reload --port 8000
 |---|---|---|
 | `GET` | `/api/health` | Health check |
 | `POST` | `/api/chat/send` | Send message to AI assistant (with RAG) |
-| `POST` | `/api/contexts/triangulate` | Ingest PRD + repo + JIRA → unified context |
+| `POST` | `/api/contexts/triangulate` | Ingest PRD + repo + JIRA + Linear → unified context |
 | `GET` | `/api/contexts` | List all contexts |
 | `GET` | `/api/contexts/{id}` | Get context by ID |
 | `POST` | `/api/tests/generate` | Generate test suite from context |
@@ -123,6 +256,22 @@ uvicorn src.main:app --reload --port 8000
 | `GET` | `/api/runs/{id}` | Get run results |
 | `GET` | `/api/models` | List all available LLM models |
 | `GET` | `/api/models/providers` | List LLM providers |
+| `GET` | `/api/settings` | Get user settings (provider keys, connectors) |
+| `POST` | `/api/settings/provider-keys` | Add a user-provided LLM API key |
+| `DELETE` | `/api/settings/provider-keys/{provider}` | Remove a user-provided LLM API key |
+| `POST` | `/api/settings/jira` | Configure JIRA connector |
+| `POST` | `/api/settings/linear` | Configure Linear connector |
+| `POST` | `/api/settings/github` | Configure GitHub connector |
+| `DELETE` | `/api/settings/github` | Disconnect GitHub |
+| `GET` | `/api/connectors/github/repos` | List GitHub repos |
+| `GET` | `/api/connectors/github/repos/{owner}/{repo}/branches` | List repo branches |
+| `POST` | `/api/connectors/jira/issue` | Get JIRA issue by key |
+| `POST` | `/api/connectors/jira/search` | Search JIRA issues (JQL) |
+| `POST` | `/api/connectors/linear/issue` | Get Linear issue by ID |
+| `GET` | `/api/connectors/linear/teams` | List Linear teams |
+| `POST` | `/api/connectors/linear/search` | Search Linear issues |
+| `POST` | `/api/prd/upload` | Upload PRD file (.md, .txt, .pdf) |
+| `POST` | `/api/prd/google-doc` | Fetch PRD from Google Doc URL |
 | `WS` | `/ws/runs/{run_id}/logs` | Live execution log stream |
 
 ### LLM Providers
@@ -155,11 +304,15 @@ backend/
     │   ├── tests.py         # Test generation + CRUD
     │   ├── runs.py          # Test execution + results
     │   ├── models.py        # Model catalog listing
+    │   ├── settings.py      # User settings (keys, connectors)
+    │   ├── connectors.py    # GitHub/JIRA/Linear connector API
+    │   ├── prd.py           # PRD file upload + Google Doc fetch
     │   └── ws.py            # WebSocket live logs
     ├── engines/
     │   ├── prd_parser.py    # Markdown/PDF → requirements
     │   ├── github_indexer.py # Repo clone + AST + diff
     │   ├── jira_connector.py # JIRA REST API
+    │   ├── linear_connector.py # Linear GraphQL API
     │   └── triangulator.py  # Merge into unified context
     ├── agents/
     │   ├── models.py        # 35+ model catalog
@@ -209,12 +362,13 @@ npm run dev
 
 ### Dashboard Panels
 
-The dashboard has 4 tabbed panels plus a collapsible PRD drawer:
+The dashboard has 5 tabbed panels plus a collapsible PRD drawer:
 
 #### 1. AI Assistant (Chat)
 - Conversational interface to the Hendrickson agent
 - **Model picker** in the header — select from 35+ models across 5 providers
 - RAG-powered: searches Qdrant for relevant requirements and code context
+- Supports user-provided API keys configured in Settings
 - Example prompts:
   - _"Generate a full test suite for my PRD"_
   - _"Run sanity check on JIRA-402"_
@@ -238,9 +392,19 @@ The dashboard has 4 tabbed panels plus a collapsible PRD drawer:
 - Bar chart: run history with pass/fail breakdown
 - Updates automatically after each test run
 
+#### 5. Settings
+- **LLM Provider Keys**: Add/remove per-user API keys for OpenAI, Anthropic, DeepSeek, OpenRouter
+- **GitHub**: Connect a GitHub account, browse repos, select repo + branch for triangulation
+- **JIRA**: Configure JIRA instance URL, email, and API token; search and select issues
+- **Linear**: Configure Linear API key; browse teams and select issues
+- All settings are persisted in MongoDB and override environment-level defaults
+
 #### PRD Drawer (left sidebar)
 - Collapsible panel for ingesting PRD content
 - Paste markdown or plain text requirements
+- **Upload** .md, .txt, or .pdf files
+- **Fetch** from a Google Doc URL
+- Shows linked context: selected repo, branch, JIRA keys, Linear issue IDs
 - Click **"Ingest PRD"** to parse, triangulate, and index into Qdrant
 - Extracted requirements displayed with tags and descriptions
 
@@ -268,8 +432,10 @@ frontend/
     │   │   └── CanvasPanel.tsx # Test list + Monaco editor
     │   ├── runner/
     │   │   └── RunnerPanel.tsx # Execution + live terminal
-    │   └── telemetry/
-    │       └── TelemetryPanel.tsx # Recharts metrics
+    │   ├── telemetry/
+    │   │   └── TelemetryPanel.tsx # Recharts metrics
+    │   └── settings/
+    │       └── SettingsPanel.tsx # Provider keys + connectors
     ├── lib/
     │   ├── api.ts            # Typed API client
     │   ├── ws.ts             # WebSocket client
@@ -285,20 +451,29 @@ frontend/
 ### Scenario: PRD → Tests → Execute → Metrics
 
 1. **Start services**: `docker-compose up -d mongodb qdrant` then start backend + frontend
-2. **Open dashboard**: http://localhost:3000
-3. **Ingest PRD**: Open the left drawer, paste PRD content, click "Ingest PRD"
-4. **Generate tests**: Go to Test Canvas tab, click +Unit, +Integration, +E2E, +UAT
-5. **Inspect code**: Click any test case to view/edit in the Monaco editor
-6. **Run tests**: Go to Runner tab, select environment, click "Run Test Suite"
-7. **View results**: Watch live terminal output, then switch to Telemetry for metrics
-8. **Chat with AI**: Ask the assistant questions about results, coverage, or next steps
+2. **Configure connectors**: Go to Settings tab, connect GitHub, JIRA, and/or Linear
+3. **Open dashboard**: http://localhost:3000
+4. **Ingest PRD**: Open the left drawer, paste PRD content (or upload a file, or fetch from Google Doc), click "Ingest PRD"
+5. **Generate tests**: Go to Test Canvas tab, click +Unit, +Integration, +E2E, +UAT
+6. **Inspect code**: Click any test case to view/edit in the Monaco editor
+7. **Run tests**: Go to Runner tab, select environment, click "Run Test Suite"
+8. **View results**: Watch live terminal output, then switch to Telemetry for metrics
+9. **Chat with AI**: Ask the assistant questions about results, coverage, or next steps
 
 ### Scenario: JIRA Bug Fix Validation
 
-1. **Triangulate**: `POST /api/contexts/triangulate` with `jira_keys: ["JIRA-402"]` and `repo_url`
-2. **Chat**: _"Run a sanity check on JIRA-402 and run regression on affected billing modules"_
-3. **Execute**: The system identifies modified functions via git diff, runs targeted tests
-4. **Auto-update**: JIRA ticket transitions to "QA Verified" on pass
+1. **Configure JIRA**: In Settings, add your JIRA URL, email, and API token
+2. **Triangulate**: `POST /api/contexts/triangulate` with `jira_keys: ["JIRA-402"]` and `repo_url`
+3. **Chat**: _"Run a sanity check on JIRA-402 and run regression on affected billing modules"_
+4. **Execute**: The system identifies modified functions via git diff, runs targeted tests
+5. **Auto-update**: JIRA ticket transitions to "QA Verified" on pass
+
+### Scenario: Linear Issue Validation
+
+1. **Configure Linear**: In Settings, add your Linear API key
+2. **Select issues**: Browse Linear teams and issues from the Settings panel
+3. **Triangulate**: Ingest PRD with linked Linear issue IDs
+4. **Generate + Execute**: The system generates tests scoped to the Linear issues and runs them
 
 ---
 
