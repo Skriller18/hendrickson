@@ -43,6 +43,15 @@ async def send_message(req: ChatRequest, request: Request):
             user_keys[pk["provider"]] = pk["api_key"]
         llm.set_user_keys(user_keys)
 
+        gemini_cfg = user_settings_doc.get("connectors", {}).get("gemini", {})
+        if gemini_cfg:
+            llm.set_user_gemini_config({
+                "api_key": gemini_cfg.get("api_key", ""),
+                "use_vertex": str(gemini_cfg.get("use_vertex", False)).lower(),
+                "vertex_project": gemini_cfg.get("vertex_project", ""),
+                "vertex_location": gemini_cfg.get("vertex_location", "us-central1"),
+            })
+
     rag_context = ""
     if req.context_id:
         try:
@@ -76,7 +85,7 @@ async def send_message(req: ChatRequest, request: Request):
     except Exception as e:
         reply = (
             f"I understand you want to: {req.message}. However, I encountered an issue: {str(e)}. "
-            "Please ensure an LLM provider is configured (OPENAI_API_KEY, ANTHROPIC_API_KEY, or DEEPSEEK_API_KEY)."
+            "Please ensure an LLM provider is configured (OPENAI_API_KEY, ANTHROPIC_API_KEY, DEEPSEEK_API_KEY, GEMINI_API_KEY, or OPENROUTER_API_KEY)."
         )
 
     return ChatResponse(reply=reply, actions=[])

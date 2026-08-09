@@ -25,10 +25,18 @@ class GitHubSettings(BaseModel):
     username: str = ""
 
 
+class GeminiSettings(BaseModel):
+    api_key: str = ""
+    use_vertex: bool = False
+    vertex_project: str = ""
+    vertex_location: str = "us-central1"
+
+
 class ConnectorSettings(BaseModel):
     jira: JIRASettings = Field(default_factory=JIRASettings)
     linear: LinearSettings = Field(default_factory=LinearSettings)
     github: GitHubSettings = Field(default_factory=GitHubSettings)
+    gemini: GeminiSettings = Field(default_factory=GeminiSettings)
 
 
 class UserSettings(BaseModel):

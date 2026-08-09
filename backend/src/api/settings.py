@@ -5,6 +5,7 @@ from src.models.settings import (
     GitHubSettings,
     JIRASettings,
     LinearSettings,
+    GeminiSettings,
     ProviderKey,
     UserSettings,
 )
@@ -30,6 +31,13 @@ class LinearConfigRequest(BaseModel):
 
 class GitHubConfigRequest(BaseModel):
     token: str
+
+
+class GeminiConfigRequest(BaseModel):
+    api_key: str = ""
+    use_vertex: bool = False
+    vertex_project: str = ""
+    vertex_location: str = "us-central1"
 
 
 async def _get_settings(db) -> UserSettings:
@@ -134,6 +142,20 @@ async def disconnect_github(request: Request):
     db = request.app.state.mongo_db
     settings = await _get_settings(db)
     settings.connectors.github = GitHubSettings()
+    await _save_settings(db, settings)
+    return {"status": "ok"}
+
+
+@router.post("/gemini")
+async def configure_gemini(req: GeminiConfigRequest, request: Request):
+    db = request.app.state.mongo_db
+    settings = await _get_settings(db)
+    settings.connectors.gemini = GeminiSettings(
+        api_key=req.api_key,
+        use_vertex=req.use_vertex,
+        vertex_project=req.vertex_project,
+        vertex_location=req.vertex_location,
+    )
     await _save_settings(db, settings)
     return {"status": "ok"}
 

@@ -42,6 +42,15 @@ async def generate_tests(req: GenerateTestsRequest, request: Request):
             user_keys[pk["provider"]] = pk["api_key"]
         llm.set_user_keys(user_keys)
 
+        gemini_cfg = user_settings_doc.get("connectors", {}).get("gemini", {})
+        if gemini_cfg:
+            llm.set_user_gemini_config({
+                "api_key": gemini_cfg.get("api_key", ""),
+                "use_vertex": str(gemini_cfg.get("use_vertex", False)).lower(),
+                "vertex_project": gemini_cfg.get("vertex_project", ""),
+                "vertex_location": gemini_cfg.get("vertex_location", "us-central1"),
+            })
+
     context_doc = await db.contexts.find_one({"context_id": req.context_id})
     if not context_doc:
         raise HTTPException(status_code=404, detail="Context not found")

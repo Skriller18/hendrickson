@@ -295,6 +295,41 @@ PROVIDERS = {
             ),
         ],
     },
+    "gemini": {
+        "name": "Google Gemini",
+        "models": [
+            ModelInfo(
+                id="gemini-2.5-pro",
+                name="Gemini 2.5 Pro",
+                provider="gemini",
+                description="Google's most capable model for complex reasoning and coding",
+                context_window=1000000,
+                max_output_tokens=16384,
+                supports_vision=True,
+                cost_level="medium",
+            ),
+            ModelInfo(
+                id="gemini-2.5-flash",
+                name="Gemini 2.5 Flash",
+                provider="gemini",
+                description="Fast, cost-efficient model for high-volume tasks",
+                context_window=1000000,
+                max_output_tokens=16384,
+                supports_vision=True,
+                cost_level="low",
+            ),
+            ModelInfo(
+                id="gemini-2.5-flash-lite",
+                name="Gemini 2.5 Flash Lite",
+                provider="gemini",
+                description="Most cost-effective Gemini model for simple tasks",
+                context_window=1000000,
+                max_output_tokens=16384,
+                supports_vision=True,
+                cost_level="low",
+            ),
+        ],
+    },
     "ollama": {
         "name": "Ollama (Local)",
         "models": [

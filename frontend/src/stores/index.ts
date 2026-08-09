@@ -74,6 +74,13 @@ interface GitHubConfig {
   username: string;
 }
 
+interface GeminiConfig {
+  api_key: string;
+  use_vertex: boolean;
+  vertex_project: string;
+  vertex_location: string;
+}
+
 interface Repo {
   id: number;
   name: string;
@@ -142,6 +149,9 @@ interface AppState {
   githubConfig: GitHubConfig | null;
   setGitHubConfig: (config: GitHubConfig | null) => void;
 
+  geminiConfig: GeminiConfig | null;
+  setGeminiConfig: (config: GeminiConfig | null) => void;
+
   selectedRepo: Repo | null;
   setSelectedRepo: (repo: Repo | null) => void;
 
@@ -206,6 +216,9 @@ export const useStore = create<AppState>((set) => ({
 
   githubConfig: null,
   setGitHubConfig: (config) => set({ githubConfig: config }),
+
+  geminiConfig: null,
+  setGeminiConfig: (config) => set({ geminiConfig: config }),
 
   selectedRepo: null,
   setSelectedRepo: (repo) => set({ selectedRepo: repo }),

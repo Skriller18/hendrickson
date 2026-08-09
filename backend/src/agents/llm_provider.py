@@ -1,6 +1,7 @@
 from openai import AsyncOpenAI
 from anthropic import AsyncAnthropic
 from ollama import AsyncClient as OllamaAsyncClient
+from google import genai
 
 from src.agents.models import get_provider_for_model
 
@@ -12,6 +13,9 @@ class LLMProvider:
         anthropic_api_key: str = "",
         deepseek_api_key: str = "",
         openrouter_api_key: str = "",
+        gemini_api_key: str = "",
+        vertex_project: str = "",
+        vertex_location: str = "us-central1",
         ollama_base_url: str = "http://localhost:11434",
         default_model: str = "gpt-5.6-terra",
     ):
@@ -19,9 +23,13 @@ class LLMProvider:
         self._anthropic_key = anthropic_api_key
         self._deepseek_key = deepseek_api_key
         self._openrouter_key = openrouter_api_key
+        self._gemini_api_key = gemini_api_key
+        self._vertex_project = vertex_project
+        self._vertex_location = vertex_location
         self.ollama_base_url = ollama_base_url
         self.default_model = default_model
         self._user_keys: dict[str, str] = {}
+        self._user_gemini_config: dict[str, str] = {}
         self._rebuild_clients()
 
     def _rebuild_clients(self):
@@ -29,6 +37,10 @@ class LLMProvider:
         anthropic_key = self._user_keys.get("anthropic") or self._anthropic_key
         deepseek_key = self._user_keys.get("deepseek") or self._deepseek_key
         openrouter_key = self._user_keys.get("openrouter") or self._openrouter_key
+        gemini_api_key = self._user_keys.get("gemini") or self._gemini_api_key
+        vertex_project = self._user_gemini_config.get("vertex_project") or self._vertex_project
+        vertex_location = self._user_gemini_config.get("vertex_location") or self._vertex_location
+        use_vertex = self._user_gemini_config.get("use_vertex") == "true"
 
         self.openai = AsyncOpenAI(api_key=openai_key) if openai_key else None
         self.anthropic = AsyncAnthropic(api_key=anthropic_key) if anthropic_key else None
@@ -47,8 +59,23 @@ class LLMProvider:
             else None
         )
 
+        if use_vertex and vertex_project:
+            self.gemini = genai.Client(
+                vertexai=True,
+                project=vertex_project,
+                location=vertex_location,
+            )
+        elif gemini_api_key:
+            self.gemini = genai.Client(api_key=gemini_api_key)
+        else:
+            self.gemini = None
+
     def set_user_keys(self, keys: dict[str, str]):
         self._user_keys = keys
+        self._rebuild_clients()
+
+    def set_user_gemini_config(self, config: dict[str, str]):
+        self._user_gemini_config = config
         self._rebuild_clients()
 
     async def generate(
@@ -70,6 +97,8 @@ class LLMProvider:
             return await self._deepseek_generate(system_prompt, user_prompt, model, temperature, max_tokens)
         elif provider == "openrouter":
             return await self._openrouter_generate(system_prompt, user_prompt, model, temperature, max_tokens)
+        elif provider == "gemini":
+            return await self._gemini_generate(system_prompt, user_prompt, model, temperature, max_tokens)
         elif provider == "ollama":
             return await self._ollama_generate(system_prompt, user_prompt, model, temperature, max_tokens)
         else:
@@ -82,6 +111,8 @@ class LLMProvider:
             return "anthropic"
         elif model.startswith("deepseek"):
             return "deepseek"
+        elif model.startswith("gemini"):
+            return "gemini"
         elif "/" in model:
             return "openrouter"
         return "ollama"
@@ -94,6 +125,7 @@ class LLMProvider:
             (self.anthropic, "anthropic"),
             (self.deepseek, "deepseek"),
             (self.openrouter, "openrouter"),
+            (self.gemini, "gemini"),
         ]:
             if client:
                 try:
@@ -105,6 +137,8 @@ class LLMProvider:
                         return await self._deepseek_generate(system_prompt, user_prompt, model, temperature, max_tokens)
                     elif provider_name == "openrouter":
                         return await self._openrouter_generate(system_prompt, user_prompt, model, temperature, max_tokens)
+                    elif provider_name == "gemini":
+                        return await self._gemini_generate(system_prompt, user_prompt, model, temperature, max_tokens)
                 except Exception:
                     continue
 
@@ -113,7 +147,7 @@ class LLMProvider:
         except Exception:
             raise ValueError(
                 "No LLM provider configured. Set OPENAI_API_KEY, ANTHROPIC_API_KEY, "
-                "DEEPSEEK_API_KEY, OPENROUTER_API_KEY, or ensure Ollama is running."
+                "DEEPSEEK_API_KEY, OPENROUTER_API_KEY, GEMINI_API_KEY, or ensure Ollama is running."
             )
 
     async def _openai_generate(
@@ -177,6 +211,25 @@ class LLMProvider:
             max_tokens=max_tokens,
         )
         return resp.choices[0].message.content or ""
+
+    async def _gemini_generate(
+        self, system_prompt: str, user_prompt: str, model: str, temperature: float, max_tokens: int
+    ) -> str:
+        if not self.gemini:
+            raise ValueError("Gemini not configured")
+        contents = []
+        if system_prompt:
+            contents.append(f"System: {system_prompt}")
+        contents.append(user_prompt)
+        resp = await self.gemini.aio.models.generate_content(
+            model=model,
+            contents="\n\n".join(contents),
+            config={
+                "temperature": temperature,
+                "max_output_tokens": max_tokens,
+            },
+        )
+        return resp.text or ""
 
     async def _ollama_generate(
         self, system_prompt: str, user_prompt: str, model: str, temperature: float, max_tokens: int

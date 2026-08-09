@@ -30,6 +30,7 @@ export function SettingsPanel() {
     jiraConfig, setJiraConfig,
     linearConfig, setLinearConfig,
     githubConfig, setGitHubConfig,
+    geminiConfig, setGeminiConfig,
     selectedRepo, setSelectedRepo,
     selectedBranch, setSelectedBranch,
     selectedJiraKeys, setSelectedJiraKeys,
@@ -56,6 +57,11 @@ export function SettingsPanel() {
   const [branches, setBranches] = useState<Branch[]>([]);
   const [loadingRepos, setLoadingRepos] = useState(false);
   const [loadingBranches, setLoadingBranches] = useState(false);
+
+  const [geminiApiKey, setGeminiApiKey] = useState("");
+  const [geminiUseVertex, setGeminiUseVertex] = useState(false);
+  const [geminiVertexProject, setGeminiVertexProject] = useState("");
+  const [geminiVertexLocation, setGeminiVertexLocation] = useState("us-central1");
 
   const [jiraSearchJql, setJiraSearchJql] = useState("");
   const [jiraSearchResults, setJiraSearchResults] = useState<Array<Record<string, unknown>>>([]);
@@ -94,6 +100,14 @@ export function SettingsPanel() {
         if (g) {
           setGitHubConfig(g as any);
           setGithubToken(g.token as string || "");
+        }
+        const gm = conn.gemini as Record<string, unknown> | undefined;
+        if (gm) {
+          setGeminiConfig(gm as any);
+          setGeminiApiKey(gm.api_key as string || "");
+          setGeminiUseVertex((gm.use_vertex as boolean) || false);
+          setGeminiVertexProject(gm.vertex_project as string || "");
+          setGeminiVertexLocation(gm.vertex_location as string || "us-central1");
         }
       }
     }).catch(() => {});
@@ -197,6 +211,29 @@ export function SettingsPanel() {
     }
   }
 
+  async function saveGemini() {
+    setLoading(true);
+    try {
+      await api.settings.configureGemini(
+        geminiApiKey,
+        geminiUseVertex,
+        geminiVertexProject,
+        geminiVertexLocation,
+      );
+      setGeminiConfig({
+        api_key: geminiApiKey,
+        use_vertex: geminiUseVertex,
+        vertex_project: geminiVertexProject,
+        vertex_location: geminiVertexLocation,
+      });
+      showMessage("success", "Gemini configured");
+    } catch {
+      showMessage("error", "Failed to configure Gemini");
+    } finally {
+      setLoading(false);
+    }
+  }
+
   async function fetchRepos() {
     setLoadingRepos(true);
     try {
@@ -284,6 +321,7 @@ export function SettingsPanel() {
 
   const sections = [
     { id: "providers", label: "AI Providers", icon: <Key className="w-3.5 h-3.5" /> },
+    { id: "gemini", label: "Gemini", icon: <Key className="w-3.5 h-3.5" /> },
     { id: "github", label: "GitHub", icon: <Github className="w-3.5 h-3.5" /> },
     { id: "jira", label: "JIRA", icon: <Link2 className="w-3.5 h-3.5" /> },
     { id: "linear", label: "Linear", icon: <Link2 className="w-3.5 h-3.5" /> },
@@ -374,6 +412,96 @@ export function SettingsPanel() {
                 </div>
               </div>
             ))}
+          </div>
+        )}
+
+        {activeSection === "gemini" && (
+          <div className="space-y-4">
+            <p className="text-xs text-muted-foreground">
+              Configure Google Gemini via AI Studio API key or Vertex AI. Use Vertex AI for enterprise workloads with your GCP project.
+            </p>
+
+            <div className="p-3 rounded-md bg-secondary/50 border border-border space-y-3">
+              <div className="flex items-center gap-3">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    checked={!geminiUseVertex}
+                    onChange={() => setGeminiUseVertex(false)}
+                    className="text-primary"
+                  />
+                  <span className="text-xs text-foreground">AI Studio (API Key)</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    checked={geminiUseVertex}
+                    onChange={() => setGeminiUseVertex(true)}
+                    className="text-primary"
+                  />
+                  <span className="text-xs text-foreground">Vertex AI</span>
+                </label>
+              </div>
+
+              {!geminiUseVertex ? (
+                <div>
+                  <label className="text-xs text-muted-foreground">Gemini API Key</label>
+                  <input
+                    type="password"
+                    value={geminiApiKey}
+                    onChange={(e) => setGeminiApiKey(e.target.value)}
+                    placeholder="AIza..."
+                    className="w-full mt-1 bg-background border border-border rounded-md px-3 py-1.5 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                  />
+                  <p className="text-[10px] text-muted-foreground mt-1">
+                    Get your key at{" "}
+                    <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                      aistudio.google.com
+                    </a>
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <div>
+                    <label className="text-xs text-muted-foreground">GCP Project ID</label>
+                    <input
+                      type="text"
+                      value={geminiVertexProject}
+                      onChange={(e) => setGeminiVertexProject(e.target.value)}
+                      placeholder="my-gcp-project"
+                      className="w-full mt-1 bg-background border border-border rounded-md px-3 py-1.5 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-muted-foreground">Location</label>
+                    <input
+                      type="text"
+                      value={geminiVertexLocation}
+                      onChange={(e) => setGeminiVertexLocation(e.target.value)}
+                      placeholder="us-central1"
+                      className="w-full mt-1 bg-background border border-border rounded-md px-3 py-1.5 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                    />
+                  </div>
+                  <p className="text-[10px] text-muted-foreground">
+                    Requires Application Default Credentials (gcloud auth application-default login) or GOOGLE_APPLICATION_CREDENTIALS set.
+                  </p>
+                </div>
+              )}
+
+              <button
+                onClick={saveGemini}
+                disabled={loading || (!geminiUseVertex && !geminiApiKey.trim()) || (geminiUseVertex && !geminiVertexProject.trim())}
+                className="w-full px-3 py-2 rounded-md bg-primary text-primary-foreground text-sm hover:bg-primary/90 disabled:opacity-50"
+              >
+                Save Gemini Configuration
+              </button>
+
+              {geminiConfig?.api_key && (
+                <div className="p-2 rounded-md bg-green-400/10 border border-green-400/20 text-xs text-green-400">
+                  Gemini configured via {geminiConfig.use_vertex ? `Vertex AI (${geminiConfig.vertex_project})` : "AI Studio API Key"}
+                </div>
+              )}
+            </div>
           </div>
         )}
 

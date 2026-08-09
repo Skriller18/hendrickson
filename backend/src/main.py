@@ -43,6 +43,9 @@ async def startup():
         anthropic_api_key=settings.anthropic_api_key,
         deepseek_api_key=settings.deepseek_api_key,
         openrouter_api_key=settings.openrouter_api_key,
+        gemini_api_key=settings.gemini_api_key,
+        vertex_project=settings.vertex_project,
+        vertex_location=settings.vertex_location,
         ollama_base_url=settings.ollama_base_url,
         default_model=settings.default_llm_model,
     )

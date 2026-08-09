@@ -220,6 +220,9 @@ All settings are read from `.env` (at the project root). The backend reads it vi
 | `ANTHROPIC_API_KEY` | _(empty)_ | Anthropic API key |
 | `DEEPSEEK_API_KEY` | _(empty)_ | DeepSeek API key |
 | `OPENROUTER_API_KEY` | _(empty)_ | OpenRouter API key |
+| `GEMINI_API_KEY` | _(empty)_ | Google Gemini API key (AI Studio) |
+| `VERTEX_PROJECT` | _(empty)_ | GCP project ID for Vertex AI |
+| `VERTEX_LOCATION` | `us-central1` | Vertex AI region |
 | `OLLAMA_BASE_URL` | `http://localhost:11434` | Ollama local server |
 | `DEFAULT_LLM_MODEL` | `gpt-5.6-terra` | Default model for generation |
 | `EMBEDDING_MODEL` | `text-embedding-3-small` | OpenAI embedding model |
@@ -276,15 +279,20 @@ uvicorn src.main:app --reload --port 8000
 
 ### LLM Providers
 
-The backend supports 5 providers with 35+ models. At least one API key must be configured.
+The backend supports 6 providers with 40+ models. At least one API key must be configured.
 
 | Provider | Key Required | Models |
 |---|---|---|
 | **OpenAI** | `OPENAI_API_KEY` | GPT-5.6 Sol/Terra/Luna, GPT-5.5 Pro, GPT-5.4 Mini, o3, o3-pro, o4-mini, o4-mini-high |
 | **Anthropic** | `ANTHROPIC_API_KEY` | Claude Fable 5, Opus 5, Sonnet 5, Haiku 4.5 |
 | **DeepSeek** | `DEEPSEEK_API_KEY` | V4 Pro, V4 Flash |
+| **Google Gemini** | `GEMINI_API_KEY` or Vertex AI | Gemini 2.5 Pro, Gemini 2.5 Flash, Gemini 2.5 Flash Lite |
 | **OpenRouter** | `OPENROUTER_API_KEY` | 12 models across OpenAI, Anthropic, DeepSeek, Google, Meta |
 | **Ollama** | None (local) | Llama 3.2, Qwen 2.5, Codestral, DeepSeek R1, Phi-4, Gemma 3 |
+
+Gemini supports two authentication modes:
+- **AI Studio**: Set `GEMINI_API_KEY` in `.env` or add it in the Settings panel
+- **Vertex AI**: Set `VERTEX_PROJECT` and `VERTEX_LOCATION` in `.env`, or configure in the Settings panel (requires `gcloud auth application-default login`)
 
 The system auto-falls back across configured providers if the selected one is unavailable.
 
@@ -394,6 +402,7 @@ The dashboard has 5 tabbed panels plus a collapsible PRD drawer:
 
 #### 5. Settings
 - **LLM Provider Keys**: Add/remove per-user API keys for OpenAI, Anthropic, DeepSeek, OpenRouter
+- **Gemini**: Configure via AI Studio API key or Vertex AI (GCP project + location)
 - **GitHub**: Connect a GitHub account, browse repos, select repo + branch for triangulation
 - **JIRA**: Configure JIRA instance URL, email, and API token; search and select issues
 - **Linear**: Configure Linear API key; browse teams and select issues

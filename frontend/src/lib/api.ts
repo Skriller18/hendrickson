@@ -154,6 +154,17 @@ export const api = {
       request<{ status: string }>("/api/settings/github", {
         method: "DELETE",
       }),
+
+    configureGemini: (apiKey: string, useVertex: boolean, vertexProject: string, vertexLocation: string) =>
+      request<{ status: string }>("/api/settings/gemini", {
+        method: "POST",
+        body: JSON.stringify({
+          api_key: apiKey,
+          use_vertex: useVertex,
+          vertex_project: vertexProject,
+          vertex_location: vertexLocation,
+        }),
+      }),
   },
 
   connectors: {

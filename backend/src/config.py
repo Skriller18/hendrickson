@@ -12,6 +12,9 @@ class Settings(BaseSettings):
     anthropic_api_key: str = ""
     deepseek_api_key: str = ""
     openrouter_api_key: str = ""
+    gemini_api_key: str = ""
+    vertex_project: str = ""
+    vertex_location: str = "us-central1"
     ollama_base_url: str = "http://localhost:11434"
 
     default_llm_model: str = "gpt-5.6-terra"
